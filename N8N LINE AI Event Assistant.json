@@ -1,0 +1,199 @@
+{
+  "name": "N8N LINE AI Event Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "63986b48-6526-4708-9091-c92f8febfdc2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3ec094b7-5669-4089-9548-dd3ff6155e94",
+      "name": "Webhook",
+      "webhookId": "63986b48-6526-4708-9091-c92f8febfdc2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.events[0].message.text }}",
+        "options": {
+          "systemMessage": "คุณผู้ช่วยตอบคำถามเกี่ยวกับกำหนดการต่าง ๆ ที่อยู่ใน event data ถ้าผู้ใช้งานถามเกี่ยว event data ให้แสดงข้อมูลของ event นั้น โดยใช้ date ซึ่งเห็นวันที่ตามกำหนดการนั้นซึ่งเก็บในรูปแบบ MM/dd/yyyy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f6c21e86-ddd0-4b37-bbd3-d88ac5a08f26",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        80,
+        208
+      ],
+      "id": "09fe80e1-077b-44d6-8e16-c6da029a2a65",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dvZQGHOGusrzF1ul",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.events[0].source.userId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        208
+      ],
+      "id": "2d34ed40-cacc-4f5e-bb42-97c6a194119e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1TgtRieXV6fVk2U2BPI-W90EgY9KBcFHrh4fnutyLV3c",
+          "mode": "list",
+          "cachedResultName": "Copy of events",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TgtRieXV6fVk2U2BPI-W90EgY9KBcFHrh4fnutyLV3c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TgtRieXV6fVk2U2BPI-W90EgY9KBcFHrh4fnutyLV3c/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        368,
+        208
+      ],
+      "id": "b96b0502-93db-4a01-a7f8-1a50a2945646",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "b2ZlF5ZCRlRI2e4w",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": ""
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"replyToken\":{{ $('Webhook').item.json.body.events[0].replyToken.toJsonString() }},\n\"messages\":[\n{\"type\":\"text\",\n\"text\":{{ $json.output.toJsonString() }}}\n]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "ebebe3d6-0236-4815-9c36-77d94b7a23e1",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6f466429-756f-4867-99d7-7c733c266f63",
+  "meta": {
+    "instanceId": "21bd39eb371674e240668e7bce69ce5413d75bf29b2c018f6050996cb8337eca"
+  },
+  "id": "kVQvVd4FvnZy0aO0",
+  "tags": []
+}
